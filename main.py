@@ -8,6 +8,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 #
 
 import cocos
+from cocos.actions import *
 from cocos.director import director
 
 import pyglet
@@ -15,6 +16,7 @@ import pyglet
 import time
 import math
 import random
+
 
 class Idiot(cocos.layer.Layer):
     def __init__(self, x, y):
@@ -26,6 +28,9 @@ class Idiot(cocos.layer.Layer):
         self.distance = 0
         self.sprite = cocos.sprite.Sprite('ball32.png')
         self.sprite.position = x, y
+        self.standOn = False
+        self.p_speed = 0
+        self.h_speed = 0
         self.add(self.sprite, z = 1)
 
     def update_position(self, pos, x, y):
@@ -44,6 +49,9 @@ class Restaurance(cocos.layer.Layer):
         self.distance = 0
         self.sprite = cocos.sprite.Sprite('restaurance.png')
         self.sprite.position = x, y
+        self.standOn = False
+        self.p_speed = 0
+        self.h_speed = 0
         self.add(self.sprite, z = 1)
 
     def update_position(self, pos, x, y):
@@ -58,10 +66,58 @@ class EventHandler(cocos.layer.Layer):
         super(EventHandler, self).__init__()
         self.mainFrame = mainFrame
         self.schedule(self.update)
+        self.prevTime = 0
+        self.sprites = []
 
     def update(self, dt):
-        if(time.time() - self.mainFrame.timer>10):
-            self.mainFrame.testLabel.element.text = "on!"
+        currentTime = time.time() - self.mainFrame.timer
+        if(currentTime > 3):
+            if(self.prevTime <= 3):
+                self.start_adv()
+                self.mainFrame.testLabel.element.text = "zzzzzzzzzzzzzz!"
+        if(currentTime > 15):
+            if(self.prevTime <= 15):
+                self.end_adv()
+        if(currentTime > 6):
+            if(self.prevTime <= 6):
+                self.start_sudden()
+
+        self.prevTime = time.time()-self.mainFrame.timer
+
+    def start_adv(self):
+        self.backScene = cocos.scene.Scene()
+        self.backScene.transform_anchor = mainFrame.hos.position
+        n = 3
+        self.add(self.backScene)
+        for i in range(n):
+            sprite = cocos.sprite.Sprite('adv.png')
+            sprite.scale = 0.001
+            sprite.position = mainFrame.hos.position
+            sprite.do(ScaleTo(1, 3))
+            sprite.do(RotateBy(-720, 3) + Repeat(RotateBy(360, 3)))
+            sprite.do(MoveTo((mainFrame.center_x * (1 + 0.5*math.cos(2*math.pi * i/n)), 
+                mainFrame.center_y * (1 + 0.5*math.sin(2*math.pi * i/n))), 3))
+            self.backScene.add(sprite)
+        self.backScene.do(Delay(3) + Repeat(RotateBy(-360, 3)))
+        self.backScene.do(Delay(3) + ScaleTo(1.25, 3) + ScaleTo(0, 6))
+
+    def end_adv(self):
+        self.mainFrame.testLabel.element.text = "Wow!"
+        self.remove(self.backScene)
+        del self.backScene
+
+    def start_sudden(self):
+        n = 6
+        for i in range(n):
+            restaurance = mainFrame.create_restaurance_pos(mainFrame.center_x + math.cos(2*math.pi * i/n) * mainFrame.storm_radius,
+                mainFrame.center_y + math.sin(2*math.pi * i/n) * mainFrame.storm_radius)
+            restaurance.standOn = True
+            restaurance.p_speed = -300
+            restaurance.h_speed = 1000
+
+    def end_sudden(self):
+        pass
+
 
 
 
@@ -172,9 +228,17 @@ class MainFrame(cocos.layer.Layer):
         for person in self.people:
             if(person.moveable):
                 theta = math.atan2(person.posy - self.center_y, person.posx - self.center_x)
-                person.update_position((person.posx - (self.p_speed * math.cos(theta) - self.h_speed * math.sin(theta))/person.distance ,
-                    person.posy - (self.p_speed * math.sin(theta) + self.h_speed * math.cos(theta))/person.distance), 
-                    self.center_x, self.center_y)
+                if(person.standOn):
+                    person.update_position((person.posx - (person.p_speed * math.cos(theta) - person.h_speed * math.sin(theta))/person.distance ,
+                        person.posy - (person.p_speed * math.sin(theta) + person.h_speed * math.cos(theta))/person.distance), 
+                        self.center_x, self.center_y)
+                    if(person.distance > 400):
+                        person.standOn = False
+
+                else:
+                    person.update_position((person.posx - (self.p_speed * math.cos(theta) - self.h_speed * math.sin(theta))/person.distance ,
+                        person.posy - (self.p_speed * math.sin(theta) + self.h_speed * math.cos(theta))/person.distance), 
+                        self.center_x, self.center_y)
 
                 if(person.distance < self.storm_radius):
                     self.remove_person(person)
@@ -253,15 +317,23 @@ class MainFrame(cocos.layer.Layer):
 
     def create_idiot(self):
         rand = random.random() * 2 * math.pi
-        idiot = Idiot((1 + math.cos(rand) * 0.9)*self.center_x, (1+math.sin(rand) * 0.9)*self.center_y)
+        return self.create_idiot_pos((1 + math.cos(rand) * 0.9)*self.center_x, (1+math.sin(rand) * 0.9)*self.center_y)
+
+    def create_idiot_pos(self, x, y):
+        idiot = Idiot(x, y)
         idiot.distance = math.sqrt(math.pow(idiot.posx - self.center_x, 2) + math.pow(idiot.posy - self.center_y, 2))
         self.add_person(idiot)
+        return idiot
 
     def create_restaurance(self):
         rand = random.random() * 2 * math.pi
-        restaurance = Restaurance((1 + math.cos(rand) * 0.9)*self.center_x, (1+math.sin(rand) * 0.9)*self.center_y)
+        return self.create_restaurance_pos((1 + math.cos(rand) * 0.9)*self.center_x, (1+math.sin(rand) * 0.9)*self.center_y)
+
+    def create_restaurance_pos(self, x, y):
+        restaurance = Restaurance(x, y)
         restaurance.distance = math.sqrt(math.pow(restaurance.posx - self.center_x, 2) + math.pow(restaurance.posy - self.center_y, 2))
         self.add_person(restaurance)
+        return restaurance
 
     def add_person(self, person):
         self.add(person)
