@@ -420,43 +420,49 @@ class MainFrame(cocos.layer.Layer):
         self.last_restaurance_gen_time = 1
         self.spy_on = False;
 
+        self.debug = False
 
         for i in range(self.initial_idiots):
             self.create_idiot()
         for i in range(self.initial_restaurances):
             self.create_restaurance()
 
-        self.timeLabel = cocos.text.Label(str(time.time() - self.timer), font_size=18, x=800, y=700)
+        self.scoreLabel = cocos.text.Label('Score: '+str(self.score),font_size=18, x=800, y=700)
+        self.add(self.scoreLabel)
+
+        self.timeLabel = cocos.text.Label(str(time.time() - self.timer), font_size=18, x=800, y=660)
         self.add(self.timeLabel)
 
-        #for debugging
-        self.mouseLabel = cocos.text.Label('No mouse events yet', font_size=18, x=800, y=660)
-        self.add(self.mouseLabel)
-
-        self.idiotLabel = cocos.text.Label('idiots: ' + str(len(self.idiots)) + ', ' + str(self.idiots_count), font_size=18, x=800, y=620)
+        self.idiotLabel = cocos.text.Label('idiots: ' + str(self.idiots_count), font_size=18, x=800, y=620)
         self.add(self.idiotLabel)
 
-        self.restLabel = cocos.text.Label('rests: ' + str(len(self.restaurances)) + ', ' + str(self.restaurances_count), font_size=18, x=800, y=580)
+        self.restLabel = cocos.text.Label('rests: ' + str(self.restaurances_count), font_size=18, x=800, y=580)
         self.add(self.restLabel)
 
-        self.totalLabel = cocos.text.Label('total: ' + str(len(self.people)) + ', ' + str(self.people_count), font_size=18, x=800, y=540)
+        self.totalLabel = cocos.text.Label('total: ' + str(self.people_count), font_size=18, x=800, y=540)
         self.add(self.totalLabel)
         
-        self.fpsLabel = cocos.text.Label('FPS: ' + str(self.fps), font_size=18, x=800, y=500)
+        self.lifeLabel = cocos.text.Label('Life: '+  "♥"*self.life,font_size=18, x=800, y=500)
+        self.add(self.lifeLabel)
+
+        #for debugging
+        self.mouseLabel = cocos.text.Label('No mouse events yet', font_size=18, x=800, y=460)
+        self.add(self.mouseLabel)
+        
+        self.fpsLabel = cocos.text.Label('FPS: ' + str(self.fps), font_size=18, x=800, y=420)
         self.add(self.fpsLabel)
 
-        self.testLabel = cocos.text.Label('Test message', font_size=18, x=800, y=460)
+        self.testLabel = cocos.text.Label('Test message', font_size=18, x=800, y=380)
         self.add(self.testLabel)
-        
-        self.scoreLabel = cocos.text.Label('Score: '+str(self.score),font_size=18, x=800, y=420)
-        self.add(self.scoreLabel)
-        
-        self.lifeLabel = cocos.text.Label('Life: '+  "♥"*self.life,font_size=18, x=800, y=380)
-        self.add(self.lifeLabel)
 
         self.genTimeLabel = cocos.text.Label('genTime: '+  "0",font_size=18, x=800, y=340)
         self.add(self.genTimeLabel)
         #
+        if(~self.debug):
+            self.mouseLabel.scale = 0
+            self.fpsLabel.scale = 0
+            self.testLabel.scale = 0
+            self.genTimeLabel.scale = 0
 
         self.schedule(self.update)
 
@@ -470,9 +476,9 @@ class MainFrame(cocos.layer.Layer):
         if dt<0.01: self.fps = "Over 100!!!!"
         else: self.fps = int(1/dt)
         self.timeLabel.element.text = 'Time: ' + '%.3f' %(self.getTime())
-        self.idiotLabel.element.text = 'idiots: ' + str(len(self.idiots)) + ', ' + str(self.idiots_count)
-        self.restLabel.element.text = 'rests: ' + str(len(self.restaurances)) + ', ' + str(self.restaurances_count)
-        self.totalLabel.element.text = 'total: ' + str(len(self.people)) + ', ' + str(self.people_count)
+        self.idiotLabel.element.text = 'idiots: ' + str(self.idiots_count)
+        self.restLabel.element.text = 'rests: ' + str(self.restaurances_count)
+        self.totalLabel.element.text = 'total: ' + str(self.people_count)
         self.fpsLabel.element.text = 'FPS: ' + str(self.fps)
         self.scoreLabel.element.text = 'Score: ' + str(self.calcscore())
         self.lifeLabel.element.text = 'Life: '+ "♥"*self.life
@@ -587,6 +593,29 @@ class MainFrame(cocos.layer.Layer):
                 if(person.distance < self.storm_radius):
                     self.remove_person(person)
             self.picking_object = None
+
+    def on_key_press(self, key, modifiers):
+        """This function is called when a key is pressed.
+        
+        'key' is a constant indicating which key was pressed.
+        'modifiers' is a bitwise or of several constants indicating which
+           modifiers are active at the time of the press (ctrl, shift, capslock, etc.)
+
+        See also on_key_release situations when a key press does not fire an
+         'on_key_press' event.
+        """
+        if(pyglet.window.key.symbol_string(key) == 'D'):
+            if(self.debug):
+                self.mouseLabel.scale = 0
+                self.fpsLabel.scale = 0
+                self.testLabel.scale = 0
+                self.genTimeLabel.scale = 0
+            else:
+                self.mouseLabel.scale = 1
+                self.fpsLabel.scale = 1
+                self.testLabel.scale = 1
+                self.genTimeLabel.scale = 1
+            self.debug = ~self.debug
 
     def create_idiot(self):
         rand = random.random() * 2 * math.pi
