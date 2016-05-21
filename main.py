@@ -1,3 +1,4 @@
+# -*- encoding: utf-8 -*-
 from __future__ import division, print_function, unicode_literals
 
 # This code is so you can run the samples without installing the package
@@ -50,6 +51,20 @@ class Restaurance(cocos.layer.Layer):
         self.sprite.position  = pos
         self.distance = math.sqrt(math.pow(self.posx - x, 2) + math.pow(self.posy - y, 2))
 
+
+class EventHandler(cocos.layer.Layer):
+    is_event_handler = True
+    def __init__(self, mainFrame):
+        super(EventHandler, self).__init__()
+        self.mainFrame = mainFrame
+        self.schedule(self.update)
+
+    def update(self, dt):
+        if(time.time() - self.mainFrame.timer>10):
+            self.mainFrame.testLabel.element.text = "on!"
+
+
+
 class MainFrame(cocos.layer.Layer):
 
     is_event_handler = True
@@ -57,8 +72,8 @@ class MainFrame(cocos.layer.Layer):
     def __init__(self):
         super(MainFrame, self).__init__()
         self.hos = cocos.sprite.Sprite('hos.png')
-        x, y = director.get_window_size()
-        self.hos.position = x/2, y/2
+        self.windowx, self.windowy = director.get_window_size()
+        self.hos.position = self.windowx/2, self.windowy/2
         self.add(self.hos, z = 1)
         self.center_x, self.center_y = self.hos.position
         self.idiots = []
@@ -67,8 +82,8 @@ class MainFrame(cocos.layer.Layer):
         self.idiots_count = 0
         self.restaurances_count = 0
         self.people_count = 0
-        self.initial_idiots = 10
-        self.initial_restaurances = 10
+        self.initial_idiots = 5
+        self.initial_restaurances = 2
         self.timer = time.time()
         self.is_select = False
         self.p_speed = 100 #suck speed
@@ -76,8 +91,12 @@ class MainFrame(cocos.layer.Layer):
         self.click_radius = 1000
         self.storm_radius = 100
         self.fps = 0
-        self.prevtime = 0
-        
+        self.score = 0
+        self.life = 5
+        self.last_idiot_gen_time = 1
+        self.last_restaurance_gen_time = 1
+
+
         for i in range(self.initial_idiots):
             self.create_idiot()
         for i in range(self.initial_restaurances):
@@ -101,21 +120,55 @@ class MainFrame(cocos.layer.Layer):
         
         self.fpsLabel = cocos.text.Label('FPS: ' + str(self.fps), font_size=18, x=800, y=500)
         self.add(self.fpsLabel)
+
+        self.testLabel = cocos.text.Label('Test message', font_size=18, x=800, y=460)
+        self.add(self.testLabel)
+        
+        self.scoreLabel = cocos.text.Label('Score: '+str(self.score),font_size=18, x=800, y=420)
+        self.add(self.scoreLabel)
+        
+        self.lifeLabel = cocos.text.Label('Life: '+  "♥"*self.life,font_size=18, x=800, y=380)
+        self.add(self.lifeLabel)
+
+        self.genTimeLabel = cocos.text.Label('genTime: '+  "0",font_size=18, x=800, y=340)
+        self.add(self.genTimeLabel)
         #
 
         self.schedule(self.update)
 
+    def getTime(self):
+        return time.time()-self.timer
+
     def update(self, dt):
         self.hos.rotation += 0.75
         
-        self.fps = int(1 / (time.time()-self.prevtime))
-        self.prevtime = time.time()
-        
-        self.timeLabel.element.text = 'Time: ' + '%.3f' %(time.time() - self.timer)
+        #self.fps = int(1 / (time.time()-self.prevtime))
+        if dt<0.01: self.fps = "Over 100!!!!"
+        else: self.fps = int(1/dt)
+        self.timeLabel.element.text = 'Time: ' + '%.3f' %(self.getTime())
         self.idiotLabel.element.text = 'idiots: ' + str(len(self.idiots)) + ', ' + str(self.idiots_count)
         self.restLabel.element.text = 'rests: ' + str(len(self.restaurances)) + ', ' + str(self.restaurances_count)
         self.totalLabel.element.text = 'total: ' + str(len(self.people)) + ', ' + str(self.people_count)
         self.fpsLabel.element.text = 'FPS: ' + str(self.fps)
+        self.scoreLabel.element.text = 'Score: ' + str(self.calcscore())
+        self.lifeLabel.element.text = 'Life: '+ "♥"*self.life
+        
+        required_base_gen_time = 10-math.log10(self.getTime()+1 ) 
+
+        self.genTimeLabel.element.text = 'genTime: '+str(required_base_gen_time)
+       
+        required_idiot_gen_time = required_base_gen_time / (self.restaurances_count+1)**0.5 
+
+        required_restaurance_gen_time = required_base_gen_time / (1+math.log10(self.getTime()+1 ) )
+        if self.getTime() > self.last_idiot_gen_time + required_idiot_gen_time :
+            self.create_idiot()
+            self.last_idiot_gen_time = self.getTime()
+
+        if self.getTime() > self.last_restaurance_gen_time + required_restaurance_gen_time :
+            self.create_restaurance()
+            self.last_restaurance_gen_time = self.getTime()
+
+
         for person in self.people:
             if(person.moveable):
                 theta = math.atan2(person.posy - self.center_y, person.posx - self.center_x)
@@ -149,6 +202,10 @@ class MainFrame(cocos.layer.Layer):
         'modifiers' is a bitwise or of pyglet.window.key modifier constants
            (values like 'SHIFT', 'OPTION', 'ALT')
         """
+        if x<10: x=10
+        if y<10: y=10
+        if x>self.windowx: x=self.windowx
+        if y>self.windowy: y=self.windowy
         if(self.is_select):
             self.picking_object.update_position(director.get_virtual_coordinates(x, y), self.center_x, self.center_y)
 
@@ -177,10 +234,12 @@ class MainFrame(cocos.layer.Layer):
                 self.picking_object.update_position((v_x, v_y), self.center_x, self.center_y)
 
         elif(buttons == pyglet.window.mouse.RIGHT):
+            """
             v_x, v_y = director.get_virtual_coordinates(x, y)
             idiot = Idiot(v_x, v_y)
             idiot.distance = math.sqrt(math.pow(idiot.posx - self.center_x, 2) + math.pow(idiot.posy - self.center_y, 2))
             self.add_person(idiot)
+            """
 
     def on_mouse_release(self, x, y, buttons, modifiers):
         if hasattr(self, 'picking_object') and self.picking_object is not None:
@@ -222,14 +281,26 @@ class MainFrame(cocos.layer.Layer):
         if(person.id == 0):
             self.idiots.remove(person)
             self.idiots_count-=1
+            self.life -= 1
+            if self.life <=0: self.gameover()
         else:
             self.restaurances.remove(person)
             self.restaurances_count-=1
-        
+            self.score += 100
         del person
+
+
+    def gameover(self):
+        exit()
+
+    def calcscore(self):
+        return int(self.score+(time.time()-self.timer)*30)
+
 if __name__ == "__main__":
     director.init(width=1024, height=768,resizable=False)
     scene = cocos.scene.Scene()
     mainFrame = MainFrame()
     scene.add(mainFrame)
+    eventHandler = EventHandler(mainFrame)
+    scene.add(eventHandler)
     director.run(scene)
