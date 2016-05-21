@@ -75,7 +75,9 @@ class MainFrame(cocos.layer.Layer):
         self.h_speed = 1000 #rotate speed
         self.click_radius = 1000
         self.storm_radius = 100
-
+        self.fps = 0
+        self.prevtime = 0
+        
         for i in range(self.initial_idiots):
             self.create_idiot()
         for i in range(self.initial_restaurances):
@@ -96,16 +98,24 @@ class MainFrame(cocos.layer.Layer):
 
         self.totalLabel = cocos.text.Label('total: ' + str(len(self.people)) + ', ' + str(self.people_count), font_size=18, x=800, y=540)
         self.add(self.totalLabel)
+        
+        self.fpsLabel = cocos.text.Label('FPS: ' + str(self.fps), font_size=18, x=800, y=500)
+        self.add(self.fpsLabel)
         #
 
         self.schedule(self.update)
 
     def update(self, dt):
         self.hos.rotation += 0.75
+        
+        self.fps = int(1 / (time.time()-self.prevtime))
+        self.prevtime = time.time()
+        
         self.timeLabel.element.text = 'Time: ' + '%.3f' %(time.time() - self.timer)
         self.idiotLabel.element.text = 'idiots: ' + str(len(self.idiots)) + ', ' + str(self.idiots_count)
         self.restLabel.element.text = 'rests: ' + str(len(self.restaurances)) + ', ' + str(self.restaurances_count)
         self.totalLabel.element.text = 'total: ' + str(len(self.people)) + ', ' + str(self.people_count)
+        self.fpsLabel.element.text = 'FPS: ' + str(self.fps)
         for person in self.people:
             if(person.moveable):
                 theta = math.atan2(person.posy - self.center_y, person.posx - self.center_x)
@@ -173,12 +183,14 @@ class MainFrame(cocos.layer.Layer):
             self.add_person(idiot)
 
     def on_mouse_release(self, x, y, buttons, modifiers):
-        self.is_select = False
-        self.picking_object.moveable = True
-        if(buttons == pyglet.window.mouse.LEFT):
-            person = self.picking_object
-            if(person.distance < self.storm_radius):
-                self.remove_person(person)
+        if hasattr(self, 'picking_object') and self.picking_object is not None:
+            self.is_select = False
+            self.picking_object.moveable = True
+            if(buttons == pyglet.window.mouse.LEFT):
+                person = self.picking_object
+                if(person.distance < self.storm_radius):
+                    self.remove_person(person)
+            self.picking_object = None
 
     def create_idiot(self):
         rand = random.random() * 2 * math.pi
@@ -213,7 +225,8 @@ class MainFrame(cocos.layer.Layer):
         else:
             self.restaurances.remove(person)
             self.restaurances_count-=1
-
+        
+        del person
 if __name__ == "__main__":
     director.init(width=1024, height=768,resizable=False)
     scene = cocos.scene.Scene()
