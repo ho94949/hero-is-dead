@@ -186,7 +186,7 @@ class Portal(cocos.layer.Layer):
         if(self.remove):
             if(self.timer >= self.gen_time):
                 self.mainFrame.remove(self)
-                self.mainFrame.portalList.remove(self)
+                self.mainFrame.PortalList.remove(self)
                 del self
                 return
 
@@ -200,11 +200,53 @@ class Portal(cocos.layer.Layer):
                 self.sprite.do(ScaleTo(0.2, self.gen_time - 1))
         return
 
+class OrangePortal(cocos.layer.Layer):
+    is_event_handler = True
+    
+    def __init__(self, mainFrame, x, y):
+        super(OrangePortal, self).__init__()
+        self.id = 2
+        self.mainFrame = mainFrame
+        self.posx = x
+        self.posy = y
+        self.sprite = cocos.sprite.Sprite('portal2.png')
+        self.sprite.scale = 0.3
+        self.sprite.position = x, y
+        self.timer = 0
+        self.gen_time = 6
+        self.max_num = 1
+        self.create_num = 0
+        self.remove = False
+        self.schedule(self.update)
+        self.mainFrame.PortalList.append(self)
+        self.add(self.sprite, z = 1)
+
+    def update(self, dt):
+        self.timer += dt
+        if(self.remove):
+            if(self.timer >= self.gen_time):
+                self.mainFrame.remove(self)
+                self.mainFrame.PortalList.remove(self)
+                del self
+                return
+
+        if(self.timer >= self.gen_time):
+            self.timer -= self.gen_time
+            self.mainFrame.create_restaurance_pos(self.posx, self.posy)
+            self.create_num += 1
+            if(self.create_num >= self.max_num):
+                self.remove = True
+                self.timer = 0
+                self.sprite.do(ScaleTo(0.2, self.gen_time - 1))
+        return        
+        
+
 class EventHandler(cocos.layer.Layer):
     is_event_handler = True
     def __init__(self, mainFrame):
         super(EventHandler, self).__init__()
         self.mainFrame = mainFrame
+        self.mainFrame.eventHandler = self
         self.schedule(self.update)
         self.prevTime = 0
         self.sprites = []
@@ -215,19 +257,62 @@ class EventHandler(cocos.layer.Layer):
             if(self.prevTime <= 3):
                 self.start_adv()
                 self.mainFrame.testLabel.element.text = "zzzzzzzzzzzzzz!"
+                
         if(currentTime > 9):
             if(self.prevTime <= 9):
                 self.start_spy()
+                
         if(currentTime > 12):
             if(self.prevTime <= 12):
-                self.start_sudden()
+                self.start_sudden(6)
+                
         if(currentTime > 15):
             if(self.prevTime <= 15):
                 self.end_adv()
+                
         if(currentTime > 18):
             if(self.prevTime <= 18):
                 self.end_spy()
+        
+        if(currentTime > 20):
+            if(self.prevTime <= 20):
+                self.blackout()
+        
+        if(currentTime > 20.5):
+            if(self.prevTime <= 20.5):
+                self.removeblackout()
 
+        if(currentTime > 21):
+            if(self.prevTime <= 21):
+                self.blackout()
+        
+        if(currentTime > 21.5):
+            if(self.prevTime <= 21.5):
+                self.removeblackout()
+                
+        if(currentTime > 22):
+            if(self.prevTime <= 22):
+                self.start_spy()
+                self.blackout()
+        
+        if(currentTime > 23):
+            if(self.prevTime <= 23):
+                self.removeblackout()
+                self.start_adv()
+        
+        if(currentTime > 27):
+            if(self.prevTime <= 27):
+                self.start_spy()
+                self.start_sudden(6)
+        
+        if(currentTime > 32):
+            if(self.prevTime <=32):
+                self.open_restaurance_portal()
+                self.end_spy()
+
+        if(currentTime > 35):
+            if(self.prevTime <= 35):
+                self.end_adv()
         self.prevTime = time.time()-self.mainFrame.timer
 
     def start_adv(self):
@@ -252,8 +337,7 @@ class EventHandler(cocos.layer.Layer):
         self.remove(self.backScene)
         del self.backScene
 
-    def start_sudden(self):
-        n = 6
+    def start_sudden(self, n):
         for i in range(n):
             if i%2==0:
                 restaurance = self.mainFrame.create_restaurance_pos(self.mainFrame.center_x + math.cos(2*math.pi * i/n) * self.mainFrame.storm_radius,
@@ -281,6 +365,28 @@ class EventHandler(cocos.layer.Layer):
         for restaurance in self.mainFrame.restaurances:
             restaurance.sprite.image = pyglet.image.load('restaurance.png')
         
+    def blackout(self):
+        self.service = cocos.sprite.Sprite('service.jpg')
+        self.service.position = self.mainFrame.windowx/2, self.mainFrame.windowy/2
+        self.add(self.service, z=1)
+    
+    def removeblackout(self):
+        self.remove(self.service)
+    
+    def open_restaurance_portal(self):
+        n = 6
+        for i in range(n):
+            if i%2==0:
+                portal = OrangePortal(self.mainFrame, self.mainFrame.center_x + self.mainFrame.windowx * 0.4 * math.cos(2*math.pi * i/n),
+                self.mainFrame.center_y + self.mainFrame.windowy * 0.4 * math.sin(2*math.pi * i/n) )
+                self.mainFrame.add(portal, z=1)
+            else:
+                restaurance = self.mainFrame.create_restaurance_pos(self.mainFrame.center_x + math.cos(2*math.pi * i/n) * self.mainFrame.storm_radius,
+                    self.mainFrame.center_y + math.sin(2*math.pi * i/n) * self.mainFrame.storm_radius)
+                restaurance.standOn = True
+                restaurance.p_speed = -300
+                restaurance.h_speed = 1000               
+                
 class MainFrame(cocos.layer.Layer):
 
     is_event_handler = True
@@ -290,7 +396,7 @@ class MainFrame(cocos.layer.Layer):
         self.hos = cocos.sprite.Sprite('hos.png')
         self.windowx, self.windowy = director.get_window_size()
         self.hos.position = self.windowx/2, self.windowy/2
-        self.add(self.hos, z = 1)
+        self.add(self.hos, z = 2)
         self.center_x, self.center_y = self.hos.position
         self.idiots = []
         self.restaurances = []
