@@ -19,6 +19,7 @@ class Idiot(cocos.layer.Layer):
     def __init__(self, x, y):
         super(Idiot, self).__init__()
         self.id = 0
+        self.moveable = True
         self.posx = x
         self.posy = y
         self.distance = 0
@@ -36,6 +37,7 @@ class Restaurance(cocos.layer.Layer):
     def __init__(self, x, y):
         super(Restaurance, self).__init__()
         self.id = 1
+        self.moveable = True
         self.posx = x
         self.posy = y
         self.distance = 0
@@ -75,16 +77,9 @@ class MainFrame(cocos.layer.Layer):
         self.storm_radius = 100
 
         for i in range(self.initial_idiots):
-            rand = random.random() * 2 * math.pi
-            idiot = Idiot((1 + math.cos(rand) * 0.9)*x/2, (1+math.sin(rand) * 0.9)*y/2)
-            idiot.distance = math.sqrt(math.pow(idiot.posx - self.center_x, 2) + math.pow(idiot.posy - self.center_y, 2))
-            self.add_person(idiot)
-
+            self.create_idiot()
         for i in range(self.initial_restaurances):
-            rand = random.random() * 2 * math.pi
-            restaurance = Restaurance((1 + math.cos(rand) * 0.9)*x/2, (1+math.sin(rand) * 0.9)*y/2)
-            restaurance.distance = math.sqrt(math.pow(idiot.posx - self.center_x, 2) + math.pow(idiot.posy - self.center_y, 2))
-            self.add_person(restaurance)
+            self.create_restaurance()
 
         self.timeLabel = cocos.text.Label(str(time.time() - self.timer), font_size=18, x=800, y=700)
         self.add(self.timeLabel)
@@ -112,13 +107,14 @@ class MainFrame(cocos.layer.Layer):
         self.restLabel.element.text = 'rests: ' + str(len(self.restaurances)) + ', ' + str(self.restaurances_count)
         self.totalLabel.element.text = 'total: ' + str(len(self.people)) + ', ' + str(self.people_count)
         for person in self.people:
-            theta = math.atan2(person.posy - self.center_y, person.posx - self.center_x)
-            person.update_position((person.posx - (self.p_speed * math.cos(theta) - self.h_speed * math.sin(theta))/person.distance ,
-                person.posy - (self.p_speed * math.sin(theta) + self.h_speed * math.cos(theta))/person.distance), 
-                self.center_x, self.center_y)
+            if(person.moveable):
+                theta = math.atan2(person.posy - self.center_y, person.posx - self.center_x)
+                person.update_position((person.posx - (self.p_speed * math.cos(theta) - self.h_speed * math.sin(theta))/person.distance ,
+                    person.posy - (self.p_speed * math.sin(theta) + self.h_speed * math.cos(theta))/person.distance), 
+                    self.center_x, self.center_y)
 
-            if(person.distance < self.storm_radius):
-                self.remove_person(person)
+                if(person.distance < self.storm_radius):
+                    self.remove_person(person)
 
     def update_text(self, x, y):
         text = 'Mouse @ %d,%d' % (x, y)
@@ -167,7 +163,8 @@ class MainFrame(cocos.layer.Layer):
                     if(m > l):
                         self.picking_object = self.people[i]
             if(self.is_select):
-                self.picking_object.update_position(v_x, v_y)
+                self.picking_object.moveable = False
+                self.picking_object.update_position((v_x, v_y), self.center_x, self.center_y)
 
         elif(buttons == pyglet.window.mouse.RIGHT):
             v_x, v_y = director.get_virtual_coordinates(x, y)
@@ -177,10 +174,23 @@ class MainFrame(cocos.layer.Layer):
 
     def on_mouse_release(self, x, y, buttons, modifiers):
         self.is_select = False
+        self.picking_object.moveable = True
         if(buttons == pyglet.window.mouse.LEFT):
             person = self.picking_object
             if(person.distance < self.storm_radius):
                 self.remove_person(person)
+
+    def create_idiot(self):
+        rand = random.random() * 2 * math.pi
+        idiot = Idiot((1 + math.cos(rand) * 0.9)*self.center_x, (1+math.sin(rand) * 0.9)*self.center_y)
+        idiot.distance = math.sqrt(math.pow(idiot.posx - self.center_x, 2) + math.pow(idiot.posy - self.center_y, 2))
+        self.add_person(idiot)
+
+    def create_restaurance(self):
+        rand = random.random() * 2 * math.pi
+        restaurance = Restaurance((1 + math.cos(rand) * 0.9)*self.center_x, (1+math.sin(rand) * 0.9)*self.center_y)
+        restaurance.distance = math.sqrt(math.pow(restaurance.posx - self.center_x, 2) + math.pow(restaurance.posy - self.center_y, 2))
+        self.add_person(restaurance)
 
     def add_person(self, person):
         self.add(person)
