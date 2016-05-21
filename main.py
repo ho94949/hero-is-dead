@@ -40,14 +40,18 @@ class Idiot(cocos.layer.Layer):
 
 
 class Restaurance(cocos.layer.Layer):
-    def __init__(self, x, y):
+    def __init__(self, x, y, spy_on):
         super(Restaurance, self).__init__()
         self.id = 1
         self.moveable = True
         self.posx = x
         self.posy = y
         self.distance = 0
-        self.sprite = cocos.sprite.Sprite('restaurance.png')
+        self.spy_on = spy_on
+        if(spy_on):
+            self.sprite = cocos.sprite.Sprite('spy.png')
+        else:
+            self.sprite = cocos.sprite.Sprite('restaurance.png')
         self.sprite.position = x, y
         self.standOn = False
         self.p_speed = 0
@@ -124,12 +128,18 @@ class EventHandler(cocos.layer.Layer):
             if(self.prevTime <= 3):
                 self.start_adv()
                 self.mainFrame.testLabel.element.text = "zzzzzzzzzzzzzz!"
-        if(currentTime > 15):
-            if(self.prevTime <= 15):
-                self.end_adv()
+        if(currentTime > 9):
+            if(self.prevTime <= 9):
+                self.start_spy()
         if(currentTime > 12):
             if(self.prevTime <= 12):
                 self.start_sudden()
+        if(currentTime > 15):
+            if(self.prevTime <= 15):
+                self.end_adv()
+        if(currentTime > 18):
+            if(self.prevTime <= 18):
+                self.end_spy()
 
         self.prevTime = time.time()-self.mainFrame.timer
 
@@ -174,6 +184,16 @@ class EventHandler(cocos.layer.Layer):
     def end_sudden(self):
         pass
 
+    def start_spy(self):
+        self.mainFrame.spy_on = True
+        for restaurance in mainFrame.restaurances:
+            restaurance.sprite.image = pyglet.image.load('spy.png')
+
+    def end_spy(self):
+        self.mainFrame.spy_on = False
+        for restaurance in mainFrame.restaurances:
+            restaurance.sprite.image = pyglet.image.load('restaurance.png')
+
 
 
 
@@ -207,6 +227,7 @@ class MainFrame(cocos.layer.Layer):
         self.life = 5
         self.last_idiot_gen_time = 1
         self.last_restaurance_gen_time = 1
+        self.spy_on = False;
 
 
         for i in range(self.initial_idiots):
@@ -391,7 +412,7 @@ class MainFrame(cocos.layer.Layer):
         return self.create_restaurance_pos((1 + math.cos(rand) * 0.9)*self.center_x, (1+math.sin(rand) * 0.9)*self.center_y)
 
     def create_restaurance_pos(self, x, y):
-        restaurance = Restaurance(x, y)
+        restaurance = Restaurance(x, y, self.spy_on)
         restaurance.distance = math.sqrt(math.pow(restaurance.posx - self.center_x, 2) + math.pow(restaurance.posy - self.center_y, 2))
         self.add_person(restaurance)
         return restaurance
