@@ -10,18 +10,16 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 import cocos
 from cocos.actions import *
 from cocos.director import director
-
 import pyglet
-
-
 import time
 import math
 import random
 import webbrowser
 
+
 class GameOverFrame(cocos.layer.Layer):
     is_event_handler = True
-    def __init__(self):
+    def __init__(self, score):
         super(GameOverFrame, self).__init__()
         self.hos = cocos.sprite.Sprite('hos.png')
         self.windowx, self.windowy = director.get_window_size()
@@ -32,13 +30,25 @@ class GameOverFrame(cocos.layer.Layer):
         self.timer = time.time()
         self.webOpen = False
         self.schedule(self.update)
-    
+        self.score = score
+        
     def update(self, dt):
         currentTime = time.time() -  self.timer
         if currentTime >3 and not self.webOpen :
             self.webOpen = True
             webbrowser.open_new("http://kr.battle.net/heroes/ko/")
-        
+            self.remove(self.hos)
+            self.scoreLabel = cocos.text.Label('Score: '+str(self.score),font_size=18, x=800, y=420)
+            self.add(self.scoreLabel)
+            
+    def on_mouse_press(self, x, y, buttons, modifiers):
+        if self.webOpen:
+            del self
+            scene = cocos.scene.Scene()
+            titleFrame = TitleFrame()
+            scene.add(titleFrame)
+            director.replace(scene)            
+               
 class TitleFrame(cocos.layer.Layer):
     
     is_event_handler = True
@@ -116,7 +126,6 @@ class Idiot(cocos.layer.Layer):
         self.sprite.position  = pos
         self.distance = math.sqrt(math.pow(self.posx - x, 2) + math.pow(self.posy - y, 2))
 
-
 class Restaurance(cocos.layer.Layer):
     def __init__(self, x, y, spy_on):
         super(Restaurance, self).__init__()
@@ -150,7 +159,6 @@ class Restaurance(cocos.layer.Layer):
             portal = Portal(mainFrame, self.posx, self.posy)
             mainFrame.add(portal, z = 1)
             self.timer -= self.portal_time
-
 
 class Portal(cocos.layer.Layer):
     is_event_handler = True
@@ -191,7 +199,6 @@ class Portal(cocos.layer.Layer):
                 self.timer = 0
                 self.sprite.do(ScaleTo(0.2, self.gen_time - 1))
         return
-
 
 class EventHandler(cocos.layer.Layer):
     is_event_handler = True
@@ -524,11 +531,12 @@ class MainFrame(cocos.layer.Layer):
 
     def gameover(self):
         scene = cocos.scene.Scene()
-        gameOverFrame = GameOverFrame()
+        gameOverFrame = GameOverFrame(self.calcscore())
         scene.add(gameOverFrame)
         director.replace(scene)
         for elem in self.PortalList: del elem
         for elem in self.people: del elem
+        del self.eventHandler
         del self
         return 
 
@@ -542,4 +550,3 @@ if __name__ == "__main__":
     titleFrame = TitleFrame()
     scene.add(titleFrame)
     director.run(scene)
-    
