@@ -157,11 +157,18 @@ class EventHandler(cocos.layer.Layer):
     def start_sudden(self):
         n = 6
         for i in range(n):
-            restaurance = mainFrame.create_restaurance_pos(mainFrame.center_x + math.cos(2*math.pi * i/n) * mainFrame.storm_radius,
-                mainFrame.center_y + math.sin(2*math.pi * i/n) * mainFrame.storm_radius)
-            restaurance.standOn = True
-            restaurance.p_speed = -300
-            restaurance.h_speed = 1000
+            if i%2==0:
+                restaurance = mainFrame.create_restaurance_pos(mainFrame.center_x + math.cos(2*math.pi * i/n) * mainFrame.storm_radius,
+                    mainFrame.center_y + math.sin(2*math.pi * i/n) * mainFrame.storm_radius)
+                restaurance.standOn = True
+                restaurance.p_speed = -300
+                restaurance.h_speed = 1000
+            else:
+                doslam = mainFrame.create_idiot_pos(mainFrame.center_x + math.cos(2*math.pi * i/n) * mainFrame.storm_radius,
+                    mainFrame.center_y + math.sin(2*math.pi * i/n) * mainFrame.storm_radius)
+                doslam.standOn = True
+                doslam.p_speed = -300
+                doslam.h_speed = 1000
 
     def end_sudden(self):
         pass
