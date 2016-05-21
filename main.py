@@ -54,6 +54,7 @@ class Restaurance(cocos.layer.Layer):
         self.h_speed = 0
         self.timer = 0
         self.portal_time = 5
+        self.portal_distance = 250
         self.add(self.sprite, z = 1)
 
     def update_position(self, pos, x, y):
@@ -63,7 +64,7 @@ class Restaurance(cocos.layer.Layer):
 
     def update_time(self, mainFrame, dt):
         self.timer += dt
-        if(self.timer >= self.portal_time):
+        if(self.timer >= self.portal_time and self.distance > self.portal_distance):
             portal = Portal(mainFrame, self.posx, self.posy)
             mainFrame.add(portal, z = 1)
             self.timer -= self.portal_time
@@ -126,8 +127,8 @@ class EventHandler(cocos.layer.Layer):
         if(currentTime > 15):
             if(self.prevTime <= 15):
                 self.end_adv()
-        if(currentTime > 6):
-            if(self.prevTime <= 6):
+        if(currentTime > 12):
+            if(self.prevTime <= 12):
                 self.start_sudden()
 
         self.prevTime = time.time()-self.mainFrame.timer
