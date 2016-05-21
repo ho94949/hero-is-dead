@@ -52,12 +52,60 @@ class Restaurance(cocos.layer.Layer):
         self.standOn = False
         self.p_speed = 0
         self.h_speed = 0
+        self.timer = 0
+        self.portal_time = 5
         self.add(self.sprite, z = 1)
 
     def update_position(self, pos, x, y):
         self.posx, self.posy = pos
         self.sprite.position  = pos
         self.distance = math.sqrt(math.pow(self.posx - x, 2) + math.pow(self.posy - y, 2))
+
+    def update_time(self, mainFrame, dt):
+        self.timer += dt
+        if(self.timer >= self.portal_time):
+            portal = Portal(mainFrame, self.posx, self.posy)
+            mainFrame.add(portal, z = 1)
+            self.timer -= self.portal_time
+
+
+class Portal(cocos.layer.Layer):
+    is_event_handler = True
+
+    def __init__(self, mainFrame, x, y):
+        super(Portal, self).__init__()
+        self.id = 2
+        self.mainFrame = mainFrame
+        self.posx = x
+        self.posy = y
+        self.sprite = cocos.sprite.Sprite('portal.png')
+        self.sprite.scale = 0.3
+        self.sprite.position = x, y
+        self.timer = 0
+        self.gen_time = 6
+        self.max_num = 2
+        self.create_num = 0
+        self.remove = False
+        self.schedule(self.update)
+        self.add(self.sprite, z = 1)
+
+    def update(self, dt):
+        self.timer += dt
+        if(self.remove):
+            if(self.timer >= self.gen_time):
+                self.mainFrame.remove(self)
+                del self
+                return
+
+        if(self.timer >= self.gen_time):
+            self.timer -= self.gen_time
+            self.mainFrame.create_idiot_pos(self.posx, self.posy)
+            self.create_num += 1
+            if(self.create_num >= self.max_num):
+                self.remove = True
+                self.timer = 0
+                self.sprite.do(ScaleTo(0.2, self.gen_time - 1))
+        return
 
 
 class EventHandler(cocos.layer.Layer):
@@ -213,7 +261,8 @@ class MainFrame(cocos.layer.Layer):
 
         self.genTimeLabel.element.text = 'genTime: '+str(required_base_gen_time)
        
-        required_idiot_gen_time = required_base_gen_time / (self.restaurances_count+1)**0.5 
+        #required_idiot_gen_time = required_base_gen_time / (self.restaurances_count+1)**0.5 
+        required_idiot_gen_time = required_base_gen_time
 
         required_restaurance_gen_time = required_base_gen_time / (1+math.log10(self.getTime()+1 ) )
         if self.getTime() > self.last_idiot_gen_time + required_idiot_gen_time :
@@ -242,7 +291,11 @@ class MainFrame(cocos.layer.Layer):
 
                 if(person.distance < self.storm_radius):
                     self.remove_person(person)
+            if(person.id == 1):
+                person.update_time(self, dt)
 
+        #for portal in self.portals:
+        #    portal.update_time(self, dt)
     def update_text(self, x, y):
         text = 'Mouse @ %d,%d' % (x, y)
         self.mouseLabel.element.text = text
