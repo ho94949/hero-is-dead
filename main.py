@@ -13,11 +13,89 @@ from cocos.director import director
 
 import pyglet
 
+
 import time
 import math
 import random
+import webbrowser
 
+class GameOverFrame(cocos.layer.Layer):
+    is_event_handler = True
+    def __init__(self):
+        super(GameOverFrame, self).__init__()
+        self.hos = cocos.sprite.Sprite('hos.png')
+        self.windowx, self.windowy = director.get_window_size()
+        self.hos.position = self.windowx/2, self.windowy/2
+        self.add(self.hos, z = 1)
+        self.hos.do(ScaleTo(5, 3))
+        self.hos.do(RotateBy(720, 3))
+        self.timer = time.time()
+        self.webOpen = False
+        self.schedule(self.update)
+    
+    def update(self, dt):
+        currentTime = time.time() -  self.timer
+        if currentTime >3 and not self.webOpen :
+            self.webOpen = True
+            webbrowser.open_new("http://kr.battle.net/heroes/ko/")
+        
+class TitleFrame(cocos.layer.Layer):
+    
+    is_event_handler = True
+    
+    
+    
+    def __init__(self):
+        super(TitleFrame, self).__init__()
+        self.logo = cocos.sprite.Sprite('logo.png')
+        self.logo.position = 512, 600
+        self.add(self.logo)
+        self.chosen = False
+        
+        self.start_button = cocos.sprite.Sprite('run.png')
+        self.start_button.position = 512, 384
+        self.add(self.start_button)
+        self.run3_img_src = pyglet.image.load('run3.png')
+        self.run2_img_src = pyglet.image.load('run2.png')
+        self.run_img_src = pyglet.image.load('run.png')
+    
+    @classmethod
+    def insideObj(cls, obj, x, y):
+        return obj.x - obj.width/2 <= x <= obj.x + obj.width/2 and obj.y - obj.height/2 <= y <= obj.y + obj.height/2
+        
+    
+    def on_mouse_motion(self, x, y, dx, dy):
+        if TitleFrame.insideObj(self.start_button, x, y):
+            self.start_button.image = self.run2_img_src
+        else:
+            self.start_button.image = self.run_img_src
 
+    def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
+        if self.chosen: return
+        if TitleFrame.insideObj(self.start_button, x, y):
+            self.start_button.image = self.run2_img_src
+        else:
+            self.start_button.image = self.run_img_src
+   
+    def on_mouse_press(self, x, y, buttons, modifiers):            
+        
+        if TitleFrame.insideObj(self.start_button, x, y):
+            self.start_button.image = self.run3_img_src
+            self.chosen = True
+        else:
+            self.chosen = False
+    
+    def on_mouse_release(self, x, y, buttons, modifiers):
+        if self.chosen and TitleFrame.insideObj(self.start_button, x, y):
+            scene = cocos.scene.Scene()
+            mainFrame = MainFrame()
+            scene.add(mainFrame)
+            eventHandler = EventHandler(mainFrame)
+            scene.add(eventHandler)
+            mainFrame.eventHandler = eventHandler
+            director.replace(scene)
+        self.chosen = False
+        
 class Idiot(cocos.layer.Layer):
     def __init__(self, x, y):
         super(Idiot, self).__init__()
@@ -76,7 +154,7 @@ class Restaurance(cocos.layer.Layer):
 
 class Portal(cocos.layer.Layer):
     is_event_handler = True
-
+    
     def __init__(self, mainFrame, x, y):
         super(Portal, self).__init__()
         self.id = 2
@@ -92,6 +170,7 @@ class Portal(cocos.layer.Layer):
         self.create_num = 0
         self.remove = False
         self.schedule(self.update)
+        self.mainFrame.PortalList.append(self)
         self.add(self.sprite, z = 1)
 
     def update(self, dt):
@@ -99,6 +178,7 @@ class Portal(cocos.layer.Layer):
         if(self.remove):
             if(self.timer >= self.gen_time):
                 self.mainFrame.remove(self)
+                self.mainFrame.portalList.remove(self)
                 del self
                 return
 
@@ -145,17 +225,17 @@ class EventHandler(cocos.layer.Layer):
 
     def start_adv(self):
         self.backScene = cocos.scene.Scene()
-        self.backScene.transform_anchor = mainFrame.hos.position
+        self.backScene.transform_anchor = self.mainFrame.hos.position
         n = 3
         self.add(self.backScene)
         for i in range(n):
             sprite = cocos.sprite.Sprite('adv.png')
             sprite.scale = 0.001
-            sprite.position = mainFrame.hos.position
+            sprite.position = self.mainFrame.hos.position
             sprite.do(ScaleTo(1, 3))
             sprite.do(RotateBy(-720, 3) + Repeat(RotateBy(360, 3)))
-            sprite.do(MoveTo((mainFrame.center_x * (1 + 0.5*math.cos(2*math.pi * i/n)), 
-                mainFrame.center_y * (1 + 0.5*math.sin(2*math.pi * i/n))), 3))
+            sprite.do(MoveTo((self.mainFrame.center_x * (1 + 0.5*math.cos(2*math.pi * i/n)), 
+                self.mainFrame.center_y * (1 + 0.5*math.sin(2*math.pi * i/n))), 3))
             self.backScene.add(sprite)
         self.backScene.do(Delay(3) + Repeat(RotateBy(-360, 3)))
         self.backScene.do(Delay(3) + ScaleTo(1.25, 3) + ScaleTo(0, 6))
@@ -169,14 +249,14 @@ class EventHandler(cocos.layer.Layer):
         n = 6
         for i in range(n):
             if i%2==0:
-                restaurance = mainFrame.create_restaurance_pos(mainFrame.center_x + math.cos(2*math.pi * i/n) * mainFrame.storm_radius,
-                    mainFrame.center_y + math.sin(2*math.pi * i/n) * mainFrame.storm_radius)
+                restaurance = self.mainFrame.create_restaurance_pos(self.mainFrame.center_x + math.cos(2*math.pi * i/n) * self.mainFrame.storm_radius,
+                    self.mainFrame.center_y + math.sin(2*math.pi * i/n) * self.mainFrame.storm_radius)
                 restaurance.standOn = True
                 restaurance.p_speed = -300
                 restaurance.h_speed = 1000
             else:
-                doslam = mainFrame.create_idiot_pos(mainFrame.center_x + math.cos(2*math.pi * i/n) * mainFrame.storm_radius,
-                    mainFrame.center_y + math.sin(2*math.pi * i/n) * mainFrame.storm_radius)
+                doslam = self.mainFrame.create_idiot_pos(self.mainFrame.center_x + math.cos(2*math.pi * i/n) * self.mainFrame.storm_radius,
+                    self.mainFrame.center_y + math.sin(2*math.pi * i/n) * self.mainFrame.storm_radius)
                 doslam.standOn = True
                 doslam.p_speed = -300
                 doslam.h_speed = 1000
@@ -186,17 +266,14 @@ class EventHandler(cocos.layer.Layer):
 
     def start_spy(self):
         self.mainFrame.spy_on = True
-        for restaurance in mainFrame.restaurances:
+        for restaurance in self.mainFrame.restaurances:
             restaurance.sprite.image = pyglet.image.load('spy.png')
 
     def end_spy(self):
         self.mainFrame.spy_on = False
-        for restaurance in mainFrame.restaurances:
+        for restaurance in self.mainFrame.restaurances:
             restaurance.sprite.image = pyglet.image.load('restaurance.png')
-
-
-
-
+        
 class MainFrame(cocos.layer.Layer):
 
     is_event_handler = True
@@ -211,6 +288,7 @@ class MainFrame(cocos.layer.Layer):
         self.idiots = []
         self.restaurances = []
         self.people = []
+        self.PortalList = []
         self.idiots_count = 0
         self.restaurances_count = 0
         self.people_count = 0
@@ -445,16 +523,23 @@ class MainFrame(cocos.layer.Layer):
 
 
     def gameover(self):
-        exit()
+        scene = cocos.scene.Scene()
+        gameOverFrame = GameOverFrame()
+        scene.add(gameOverFrame)
+        director.replace(scene)
+        for elem in self.PortalList: del elem
+        for elem in self.people: del elem
+        del self
+        return 
 
     def calcscore(self):
         return int(self.score+(time.time()-self.timer)*30)
 
+        
 if __name__ == "__main__":
-    director.init(width=1024, height=768,resizable=False)
+    director.init(width=1024, height=768,resizable=False, caption = "Hero is Dead!")
     scene = cocos.scene.Scene()
-    mainFrame = MainFrame()
-    scene.add(mainFrame)
-    eventHandler = EventHandler(mainFrame)
-    scene.add(eventHandler)
+    titleFrame = TitleFrame()
+    scene.add(titleFrame)
     director.run(scene)
+    
