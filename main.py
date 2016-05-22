@@ -78,9 +78,14 @@ class GameOverFrame(cocos.layer.Layer):
             self.webOpen = True
             webbrowser.open_new("http://kr.battle.net/heroes/ko/")
             self.remove(self.hos)
+
+            self.gameOverLabel = cocos.text.Label("", font_size=18, x= 512, y =550, anchor_x = "center")
+            self.gameOverLabel.element.text = "You lost, but we will remember you."
+            self.add(self.gameOverLabel)
+
             self.infoLabel = cocos.text.Label('Type Your Name And Press Enter:', font_size = 18, x=512, y=450, anchor_x = "center")
             self.add(self.infoLabel)
-            
+
             self.name = ""
             self.nameLabel = cocos.text.Label(self.name, font_size=36, x= 320, y =384, )
             self.add(self.nameLabel)
@@ -149,6 +154,11 @@ class TitleFrame(cocos.layer.Layer):
         self.run2_img_src = pyglet.image.load('run2.png')
         self.run_img_src = pyglet.image.load('run.png')
         
+        self.storyLabel = cocos.text.Label("", font_size=16, x=356, y=300, width=630, anchor_x = "center")
+        self.storyLabel.element.multiline = True
+        self.storyLabel.element.text = "    In 2020, evil Restaurances finally defeated LoL and only DOTA2-'The God Game' survives.\n\n    Now, Restaurances try to defeat DOTA2 and rule the World.\n\n    You are the last hope, hero.\n\n    Push Restaurances into the nexus and save DOTA2 users!"
+        self.add(self.storyLabel)
+
         self.scoreLabel = []
         HighScoreData = scoreManageFrame.getHallOfFame()
         for i in range(17):
@@ -668,6 +678,7 @@ class MainFrame(cocos.layer.Layer):
                         self.picking_object = self.people[i]
             if(self.is_select):
                 self.picking_object.moveable = False
+                self.picking_object.standOn = False
                 self.picking_object.update_position((v_x, v_y), self.center_x, self.center_y)
 
         elif(buttons == pyglet.window.mouse.RIGHT):
