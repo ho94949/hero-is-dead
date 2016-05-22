@@ -1,4 +1,6 @@
 # -*- encoding: utf-8 -*-
+#!/usr/bin/env python
+
 from __future__ import division, print_function, unicode_literals
 
 # This code is so you can run the samples without installing the package
@@ -10,7 +12,15 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 import cocos
 from cocos.actions import *
 from cocos.director import director
+from cocos import audio
+
 import pyglet
+try:
+    import pyglet.media.avbin
+    have_avbin = True
+except:
+    have_avbin = False
+
 import time
 import math
 import random
@@ -46,6 +56,10 @@ class GameOverFrame(cocos.layer.Layer):
             del self
             scene = cocos.scene.Scene()
             titleFrame = TitleFrame()
+            if(have_avbin):
+                music_player.queue(pyglet.resource.media('MainMenu.mp3', streaming=True))
+                music_player.queue(pyglet.resource.media('OST.mp3', streaming=True))
+                music_player.next()
             scene.add(titleFrame)
             director.replace(scene)            
                
@@ -68,7 +82,7 @@ class TitleFrame(cocos.layer.Layer):
         self.run3_img_src = pyglet.image.load('run3.png')
         self.run2_img_src = pyglet.image.load('run2.png')
         self.run_img_src = pyglet.image.load('run.png')
-    
+
     @classmethod
     def insideObj(cls, obj, x, y):
         return obj.x - obj.width/2 <= x <= obj.x + obj.width/2 and obj.y - obj.height/2 <= y <= obj.y + obj.height/2
@@ -97,6 +111,8 @@ class TitleFrame(cocos.layer.Layer):
     
     def on_mouse_release(self, x, y, buttons, modifiers):
         if self.chosen and TitleFrame.insideObj(self.start_button, x, y):
+            if(have_avbin):
+                music_player.next()
             scene = cocos.scene.Scene()
             mainFrame = MainFrame()
             scene.add(mainFrame)
@@ -684,4 +700,10 @@ if __name__ == "__main__":
     scene = cocos.scene.Scene()
     titleFrame = TitleFrame()
     scene.add(titleFrame)
+    if(have_avbin):
+        music_player = pyglet.media.Player()
+        music_player.eos_action = 'loop'
+        music_player.queue(pyglet.resource.media('MainMenu.mp3', streaming=True))
+        music_player.queue(pyglet.resource.media('OST.mp3', streaming=True))
+        music_player.play()
     director.run(scene)
