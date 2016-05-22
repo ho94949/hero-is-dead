@@ -26,6 +26,36 @@ import math
 import random
 import webbrowser
 
+class ScoreManageFrame(cocos.layer.Layer):
+    
+    def getHallOfFame(self):
+        return self.data
+    
+    def saveScore(self):
+        f = file('score.db','w')
+        for i in self.data:
+            f.write(str(i[0])+" "+i[1]+"\n")
+        f.close()
+    
+    def updateScore(self, score, NAME):
+        self.data.append((score, NAME))
+        self.data.sort()
+        self.data.reverse()
+        self.data = self.data [:17]
+        self.saveScore()
+        
+    def __init__(self):
+        if os.path.isfile('score.db'):
+            f = file('score.db','r')
+            self.data = map(lambda x: (int(x[0]), x[1]), map(lambda x: x.split(), f.readlines()))
+            self.data.sort()
+            self.data.reverse()
+            f.close()
+        else:
+            self.data = [ (0,'NONAME') for i in range(17)]
+            self.saveScore()
+            
+    
 
 class GameOverFrame(cocos.layer.Layer):
     is_event_handler = True
@@ -48,26 +78,57 @@ class GameOverFrame(cocos.layer.Layer):
             self.webOpen = True
             webbrowser.open_new("http://kr.battle.net/heroes/ko/")
             self.remove(self.hos)
-            self.scoreLabel = cocos.text.Label('Score: '+str(self.score),font_size=18, x=800, y=420)
+            self.infoLabel = cocos.text.Label('Type Your Name And Press Enter:', font_size = 18, x=512, y=450, anchor_x = "center")
+            self.add(self.infoLabel)
+            
+            self.name = ""
+            self.nameLabel = cocos.text.Label(self.name, font_size=36, x= 512, y =384, anchor_x = "center")
+            self.add(self.nameLabel)
+            
+            self.scoreLabel = cocos.text.Label('Score: '+str(self.score),font_size=24, x=512, y=500, anchor_x = "center")
             self.add(self.scoreLabel)
             
     def on_mouse_press(self, x, y, buttons, modifiers):
+        pass
+           
+    
+    def on_key_press(self, key, modifiers):
+        print (key)
+        print (pyglet.window.key.symbol_string(key))
         if self.webOpen:
-            del self
-            scene = cocos.scene.Scene()
-            titleFrame = TitleFrame()
-            if(have_avbin):
-                music_player.queue(pyglet.resource.media('MainMenu.mp3', streaming=True))
-                music_player.queue(pyglet.resource.media('OST.mp3', streaming=True))
-                music_player.next()
-            scene.add(titleFrame)
-            director.replace(scene)            
-               
+            if ord('a')<= key <=ord('z'):
+                if len(self.name) < 6:
+                    self.name += pyglet.window.key.symbol_string(key)
+                    self.nameLabel.element.text = self.name
+            if pyglet.window.key.symbol_string(key) == 'BACKSPACE':
+                if len(self.name) != 0:
+                    self.name = self.name [:-1]
+                    self.nameLabel.element.text = self.name
+            if pyglet.window.key.symbol_string(key) == 'RETURN':
+                if(self.name ==''): self.name = 'NONAME'
+                scoreManageFrame.updateScore(self.score, self.name)
+                del self
+                scene = cocos.scene.Scene()
+                titleFrame = TitleFrame()
+                if(have_avbin):
+                    music_player.queue(pyglet.resource.media('MainMenu.mp3', streaming=True))
+                    music_player.queue(pyglet.resource.media('OST.mp3', streaming=True))
+                    music_player.next()
+                scene.add(titleFrame)
+                director.replace(scene)             
+        
+    
 class TitleFrame(cocos.layer.Layer):
     
     is_event_handler = True
     
-    
+    @classmethod
+    def ordinalPostfix(cls,a):
+        if a%100 == 11 or a%100 == 12 or a%100 == 13: return "th"
+        if a%10 == 1: return "st"
+        if a%10 == 2: return "nd"
+        if a%10 == 3: return "rd"
+        return "th"
     
     def __init__(self):
         super(TitleFrame, self).__init__()
@@ -82,7 +143,13 @@ class TitleFrame(cocos.layer.Layer):
         self.run3_img_src = pyglet.image.load('run3.png')
         self.run2_img_src = pyglet.image.load('run2.png')
         self.run_img_src = pyglet.image.load('run.png')
-
+        
+        self.scoreLabel = []
+        HighScoreData = scoreManageFrame.getHallOfFame()
+        for i in range(17):
+            self.scoreLabel.append(cocos.text.Label(('%2d%s: '%(i+1,TitleFrame.ordinalPostfix(i+1)) )+('%06d %s'%HighScoreData[i]),font_name='GulimChe',font_size=16, x=750, y=700-i*40))
+            self.add(self.scoreLabel[i])    
+            
     @classmethod
     def insideObj(cls, obj, x, y):
         return obj.x - obj.width/2 <= x <= obj.x + obj.width/2 and obj.y - obj.height/2 <= y <= obj.y + obj.height/2
@@ -435,7 +502,6 @@ class MainFrame(cocos.layer.Layer):
         self.last_idiot_gen_time = 1
         self.last_restaurance_gen_time = 1
         self.spy_on = False;
-
         self.debug = False
 
         for i in range(self.initial_idiots):
@@ -443,6 +509,12 @@ class MainFrame(cocos.layer.Layer):
         for i in range(self.initial_restaurances):
             self.create_restaurance()
 
+        
+        self.highScore = scoreManageFrame.getHallOfFame()[0][0]
+        
+        self.highScoreLabel = cocos.text.Label('HighScore: '+str(self.highScore),font_size=18, x=800, y=740)
+        self.add(self.highScoreLabel)
+        
         self.scoreLabel = cocos.text.Label('Score: '+str(self.score),font_size=18, x=800, y=700)
         self.add(self.scoreLabel)
 
@@ -498,6 +570,7 @@ class MainFrame(cocos.layer.Layer):
         self.fpsLabel.element.text = 'FPS: ' + str(self.fps)
         self.scoreLabel.element.text = 'Score: ' + str(self.calcscore())
         self.lifeLabel.element.text = 'Life: '+ "♥"*self.life
+        self.highScoreLabel.element.text = 'HighScore: ' + str(max(self.highScore,self.calcscore()))
         
         required_base_gen_time = 10-math.log10(self.getTime()+1 ) 
 
@@ -696,11 +769,14 @@ class MainFrame(cocos.layer.Layer):
 
         
 if __name__ == "__main__":
+    global scoreManageFrame
+    scoreManageFrame = ScoreManageFrame() 
     director.init(width=1024, height=768,resizable=False, caption = "Hero is Dead!")
     scene = cocos.scene.Scene()
     titleFrame = TitleFrame()
     scene.add(titleFrame)
     if(have_avbin):
+        global music_player
         music_player = pyglet.media.Player()
         music_player.eos_action = 'loop'
         music_player.queue(pyglet.resource.media('MainMenu.mp3', streaming=True))
