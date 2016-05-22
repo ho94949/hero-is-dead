@@ -82,12 +82,17 @@ class GameOverFrame(cocos.layer.Layer):
             self.add(self.infoLabel)
             
             self.name = ""
-            self.nameLabel = cocos.text.Label(self.name, font_size=36, x= 512, y =384, anchor_x = "center")
+            self.nameLabel = cocos.text.Label(self.name, font_size=36, x= 320, y =384, )
             self.add(self.nameLabel)
             
             self.scoreLabel = cocos.text.Label('Score: '+str(self.score),font_size=24, x=512, y=500, anchor_x = "center")
             self.add(self.scoreLabel)
             
+        if self.webOpen:
+            if int(currentTime*3)%2==0 :
+                self.nameLabel.element.text = self.name + " "
+            else:
+                self.nameLabel.element.text = self.name + "|"
     def on_mouse_press(self, x, y, buttons, modifiers):
         pass
            
@@ -99,11 +104,11 @@ class GameOverFrame(cocos.layer.Layer):
             if ord('a')<= key <=ord('z'):
                 if len(self.name) < 6:
                     self.name += pyglet.window.key.symbol_string(key)
-                    self.nameLabel.element.text = self.name
+                    #self.nameLabel.element.text = self.name
             if pyglet.window.key.symbol_string(key) == 'BACKSPACE':
                 if len(self.name) != 0:
                     self.name = self.name [:-1]
-                    self.nameLabel.element.text = self.name
+                    #self.nameLabel.element.text = self.name
             if pyglet.window.key.symbol_string(key) == 'RETURN':
                 if(self.name ==''): self.name = 'NONAME'
                 scoreManageFrame.updateScore(self.score, self.name)
